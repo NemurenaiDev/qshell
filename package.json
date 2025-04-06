@@ -1,0 +1,20 @@
+{
+    "name": "qshell",
+    "type": "module",
+    "module": "app.ts",
+    "license": "MIT",
+    "bin": "./build/src/app.js",
+    "scripts": {
+        "build": "rm -rf ./build && npx tsc && npx pkg . --targets node18-linux-x64 --output ./build/release/qshell",
+        "build:prepare": "npm rebuild node-pty --target=18.5.0 --runtime=node"
+    },
+    "dependencies": {
+        "node-pty": "^1.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.14.0",
+        "typescript": "^5.0.0",
+        "bytenode": "^1.5.7",
+        "pkg": "^5.8.1"
+    }
+}
