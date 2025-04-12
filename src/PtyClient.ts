@@ -5,9 +5,9 @@ export class PtyClient {
 	private ctlsock;
 	private rawsock;
 
-	constructor(ctlsockPath: string, rawsockPath: string) {
-		this.ctlsock = createConnection(ctlsockPath);
-		this.rawsock = createConnection(rawsockPath);
+	constructor(sockpath: string) {
+		this.ctlsock = createConnection(sockpath);
+		this.rawsock = createConnection(sockpath);
 	}
 
 	async Connect() {
@@ -18,20 +18,20 @@ export class PtyClient {
 					resolve(true);
 				}
 			});
-			this.ctlsock.write(this.id);
-			this.rawsock.write(this.id);
+			this.ctlsock.write(`ctl:${this.id}`);
+			this.rawsock.write(`raw:${this.id}`);
 		});
 	}
 
 	async Attach() {
 		const { stdin, stdout } = process;
 
-		stdout.write("\x1b[?1049h");
+		// stdout.write("\x1b[?1049h");
 		stdin.setRawMode(true);
 		stdin.resume();
 
 		this.ctlsock.on("close", () => {
-			stdout.write("\x1b[?1049l");
+			// stdout.write("\x1b[?1049l");
 			stdin.setRawMode(false);
 			stdin.pause();
 		});
@@ -61,7 +61,7 @@ export class PtyClient {
 		this.ctlsock.end();
 	}
 
-    GetId() {
-        return this.id
-    }
-} 
+	GetId() {
+		return this.id;
+	}
+}

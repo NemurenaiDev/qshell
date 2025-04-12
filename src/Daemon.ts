@@ -1,26 +1,29 @@
 import { type Socket, createServer } from "node:net";
 import { Pty } from "./Pty";
 
+export type DaemonOptions = {
+	shell: string;
+	term: string;
+	pool: number;
+};
+
 export class Daemon {
 	private initialized = new Array<Pty>();
 	private connected = new Set<Pty>();
-	private ctlServer = createServer();
-	private rawServer = createServer();
 	private clients = new Map<string, { ctlsock?: Socket; rawsock?: Socket }>();
-	private shell = "zsh";
+	private server = createServer();
 
 	constructor(
-		private ctlsockPath: string,
-		private rawsockPath: string,
-		private ptyPoolSize = 3,
+		private sockpath: string,
+		private options: DaemonOptions,
 	) {
-		for (let index = 0; index < this.ptyPoolSize; index++) {
+		for (let index = 0; index < this.options.pool; index++) {
 			this.initialized.push(this.MakePty());
 		}
 	}
 
 	private MakePty() {
-		return new Pty(this.shell);
+		return new Pty(this.options.shell, this.options.term);
 	}
 
 	private Attach(id: string, ctlsock: Socket, rawsock: Socket) {
@@ -40,33 +43,38 @@ export class Daemon {
 
 	Start() {
 		return new Promise((resolve) => {
-			const handshake = (sock: Socket, type: "ctlsock" | "rawsock") => {
+			this.server.on("connection", (sock) => {
 				sock.once("data", (data) => {
-					const id = data.toString();
+					const handshakeRegex = /^(ctl|raw):\d{13}-\d{9}$/;
+					const packet = data.toString();
+					console.log(`HANDSHAKE: Got ${packet}`);
 
-					if (/\d{13}-\d{9}/.test(id)) {
-						if (!this.clients.has(id)) {
-							this.clients.set(id, {});
-						}
-						// biome-ignore lint/style/noNonNullAssertion: <explanation>
-						const socks = this.clients.get(id)!;
+					if (!handshakeRegex.test(packet)) {
+						return sock.end();
+					}
 
-						socks[type] = sock;
-						this.clients.set(id, socks);
+					const [type, id] = packet.split(":");
 
-						if (socks.ctlsock && socks.rawsock) {
-							this.Attach(id, socks.ctlsock, socks.rawsock);
-						}
+					if (!this.clients.has(id)) {
+						this.clients.set(id, {});
+					}
+					// biome-ignore lint/style/noNonNullAssertion: <explanation>
+					const socks = this.clients.get(id)!;
+
+					if (type === "ctl") {
+						socks.ctlsock = sock;
 					} else {
-						sock.end();
+						socks.rawsock = sock;
+					}
+					this.clients.set(id, socks);
+
+					if (socks.ctlsock && socks.rawsock) {
+						this.Attach(id, socks.ctlsock, socks.rawsock);
 					}
 				});
-			};
-			this.ctlServer.on("connection", (sock) => handshake(sock, "ctlsock"));
-			this.rawServer.on("connection", (sock) => handshake(sock, "rawsock"));
+			});
 
-			this.ctlServer.listen(this.ctlsockPath, () => resolve(null));
-			this.rawServer.listen(this.rawsockPath, () => resolve(null));
+			this.server.listen(this.sockpath, () => resolve(null));
 		});
 	}
 
@@ -74,8 +82,8 @@ export class Daemon {
 		return Promise.all([
 			Promise.all(this.initialized.map((pty) => pty.Kill())),
 			Promise.all(Array.from(this.connected).map((pty) => pty.Kill())),
-			new Promise((resolve) => this.ctlServer.close(() => resolve(null))),
-			new Promise((resolve) => this.rawServer.close(() => resolve(null))),
+
+			new Promise((resolve) => this.server.close(() => resolve(null))),
 		]);
 	}
 }

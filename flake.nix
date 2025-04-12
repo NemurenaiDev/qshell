@@ -1,53 +1,53 @@
 {
   description = ''
-    qshell - a utility designed to pre-initialize your shell in the background 
-    and seamlessly attach to it when opening a new terminal, 
+    qshell - a utility designed to pre-initialize your shell in the background
+    and seamlessly attach to it when opening a new terminal,
     significantly reducing terminal time-to-ready.
+
+    And btw, this flake building bad package:
+    ❯ ./result/bin/qshell --help
+    Pkg: Error reading from file.
   '';
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    gitignore = {
+      url = "github:hercules-ci/gitignore.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, gitignore, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        nodejs = pkgs.nodejs_18;
 
-        nodeApp = pkgs.stdenv.mkDerivation {
-          pname = "qshell";
-          version = "0.1.0";
-          src = ./.;
+        node2nixOutput = import ./nix { inherit pkgs nodejs system; };
+        nodeDeps = node2nixOutput.nodeDependencies;
 
-          nativeBuildInputs = [
-            pkgs.nodejs_18
-            pkgs.nodePackages.npm
-            pkgs.nodePackages.pkg
-            pkgs.nodePackages.typescript
-            pkgs.nodePackages.bytenode
-            pkgs.nodePackages.node-gyp
-            pkgs.python3
-          ];
+        app = pkgs.stdenv.mkDerivation {
+          name = "qshell";
+          version = "0.2.0";
+
+          src = gitignore.lib.gitignoreSource ./.;
+
+          buildInputs = [ nodejs ];
 
           buildPhase = ''
-            export HOME=$TMPDIR
-            npm install
-            npm run build:prepare
+            export PKG_NODE_PATH=./nix/node-v18.20.3-nix-linux-x64
+            ln -sf ${nodeDeps}/lib/node_modules ./node_modules
+
             npm run build
-          '';
-
-          installPhase = ''
+            
             mkdir -p $out/bin
-            cp build/release/qshell $out/bin/
+            cp ./build/qshell $out/bin/qshell
+            chmod +x $out/bin/qshell
           '';
         };
-      in {
-        packages.default = nodeApp;
-        packages.qshell = nodeApp;
-
-        devShells.default = pkgs.mkShell {
-          buildInputs = [ pkgs.nodejs_18 pkgs.nodePackages.npm ];
-        };
+      in with pkgs; {
+        defaultPackage = app;
+        devShell = mkShell { buildInputs = [ nodejs node2nix ]; };
       });
 }

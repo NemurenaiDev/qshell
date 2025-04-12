@@ -1,12 +1,13 @@
 import type { Socket } from "node:net";
+import { homedir } from "node:os";
 import { type IPty, spawn } from "node-pty";
 
 export class Pty {
 	private pty?: IPty;
 
-	constructor(shell: string) {
-		this.pty = spawn(shell, [], { name: "xterm-256color" });
-        
+	constructor(shell: string, term: string) {
+		this.pty = spawn(shell, [], { name: term, cwd: homedir() });
+
 		this.pty.onExit(() => console.log(`PID:${this.pty?.pid} PTY exited`));
 
 		console.log(`PID:${this.pty.pid} PTY spawned`);
