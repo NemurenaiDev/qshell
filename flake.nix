@@ -3,10 +3,6 @@
     qshell - a utility designed to pre-initialize your shell in the background
     and seamlessly attach to it when opening a new terminal,
     significantly reducing terminal time-to-ready.
-
-    And btw, this flake building bad package:
-    ❯ ./result/bin/qshell --help
-    Pkg: Error reading from file.
   '';
 
   inputs = {
@@ -30,17 +26,18 @@
         app = pkgs.stdenv.mkDerivation {
           name = "qshell";
           version = "0.2.0";
+          dontStrip = true;
 
           src = gitignore.lib.gitignoreSource ./.;
 
-          buildInputs = [ nodejs ];
+          buildInputs = [ nodejs pkgs.rsync ];
 
           buildPhase = ''
             export PKG_NODE_PATH=./nix/node-v18.20.3-nix-linux-x64
             ln -sf ${nodeDeps}/lib/node_modules ./node_modules
 
-            npm run build
-            
+            npm --offline run build
+
             mkdir -p $out/bin
             cp ./build/qshell $out/bin/qshell
             chmod +x $out/bin/qshell
