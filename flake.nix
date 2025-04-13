@@ -15,36 +15,40 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, gitignore, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-        nodejs = pkgs.nodejs_18;
+    let
+      system = "x86_64-linux";
+      
+      pkgs = import nixpkgs { inherit system; };
+      nodejs = pkgs.nodejs_18;
 
-        node2nixOutput = import ./nix { inherit pkgs nodejs system; };
-        nodeDeps = node2nixOutput.nodeDependencies;
+      node2nixOutput = import ./nix { inherit pkgs nodejs system; };
+      nodeDeps = node2nixOutput.nodeDependencies;
 
-        app = pkgs.stdenv.mkDerivation {
-          name = "qshell";
-          version = "0.2.0";
-          dontStrip = true;
+      qshell = pkgs.stdenv.mkDerivation {
+        name = "qshell";
+        version = "0.2.0";
+        dontStrip = true;
 
-          src = gitignore.lib.gitignoreSource ./.;
+        src = gitignore.lib.gitignoreSource ./.;
 
-          buildInputs = [ nodejs pkgs.rsync ];
+        buildInputs = [ nodejs ];
 
-          buildPhase = ''
-            export PKG_NODE_PATH=./nix/node-v18.20.3-nix-linux-x64
-            ln -sf ${nodeDeps}/lib/node_modules ./node_modules
+        buildPhase = ''
+          export PKG_NODE_PATH=./nix/node-v18.20.3-nix-linux-x64
+          ln -sf ${nodeDeps}/lib/node_modules ./node_modules
 
-            npm --offline run build
+          npm --offline run build
 
-            mkdir -p $out/bin
-            cp ./build/qshell $out/bin/qshell
-            chmod +x $out/bin/qshell
-          '';
-        };
-      in with pkgs; {
-        defaultPackage = app;
-        devShell = mkShell { buildInputs = [ nodejs node2nix ]; };
-      });
+          mkdir -p $out/bin
+          cp ./build/qshell $out/bin/qshell
+          chmod +x $out/bin/qshell
+        '';
+      };
+    in {
+      packages.${system}.default = qshell;
+      apps.${system}.qshell = {
+        type = "app";
+        program = "${builtins.toString qshell}/bin/qshell";
+      };
+    };
 }
