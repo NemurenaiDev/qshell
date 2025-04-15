@@ -4,11 +4,12 @@ qshell - a utility designed to pre-initialize your shell in the background and s
 
 ```
 Options:
-      --help       [boolean]
-      --version    [boolean]
-  -a, --attach     [boolean] [default: false]
-  -d, --daemon     [boolean] [default: false]
-  -s, --shell      [string] [default: "zsh"]
-  -t, --term       [string] [default: "xterm-256color"]
-  -p, --pool       [number] [default: 3]
+      --help     Show help
+      --version  Show version number
+  -a, --attach   [boolean] [default: false]
+  -d, --daemon   [boolean] [default: false]
+  -p, --pool     [number]  [default: 3]
+  -S, --sock     [string]  [default: "/tmp/qshell.sock"]
+  -s, --shell    [string]  [default: "zsh"]
+  -t, --term     [string]  [default: "xterm-256color"]
 ```

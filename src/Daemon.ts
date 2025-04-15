@@ -45,11 +45,11 @@ export class Daemon {
 		return new Promise((resolve) => {
 			this.server.on("connection", (sock) => {
 				sock.once("data", (data) => {
-					const handshakeRegex = /^(ctl|raw):\d{13}-\d{9}$/;
+					const handshakeRegex = /^(ctl|raw):\d{12,14}-\d{6}$/;
 					const packet = data.toString();
-					console.log(`HANDSHAKE: Got ${packet}`);
 
 					if (!handshakeRegex.test(packet)) {
+						console.log(`Bad handshake packet: ${packet}`);
 						return sock.end();
 					}
 

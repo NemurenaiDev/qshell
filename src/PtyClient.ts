@@ -1,7 +1,7 @@
 import { createConnection } from "node:net";
 
 export class PtyClient {
-	private id = `${Date.now()}-${process.hrtime()[1]}`;
+	private id = `${Date.now()}-${process.hrtime.bigint().toString().slice(-6)}`;
 	private ctlsock;
 	private rawsock;
 
