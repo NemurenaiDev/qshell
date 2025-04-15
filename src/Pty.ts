@@ -1,19 +1,20 @@
 import type { Socket } from "node:net";
 import { homedir } from "node:os";
-import { type IPty, spawn } from "node-pty";
+import { type IEvent, type IPty, spawn } from "node-pty";
 
 export class Pty {
-	private pty?: IPty;
+	private pty: IPty;
+
+	OnExit: IEvent<{ exitCode: number; signal?: number }>;
 
 	constructor(shell: string, term: string) {
 		this.pty = spawn(shell, [], { name: term, cwd: homedir() });
 
-		this.pty.onExit(() => console.log(`PID:${this.pty?.pid} PTY exited`));
-
 		console.log(`PID:${this.pty.pid} PTY spawned`);
-	}
 
-	OnExit = this.pty?.onExit;
+		this.pty.onExit(() => console.log(`PID:${this.pty?.pid} PTY exited`));
+		this.OnExit = this.pty.onExit;
+	}
 
 	async Kill() {
 		return new Promise((resolve) => {
@@ -48,8 +49,8 @@ export class Pty {
 		ctlsock.on("close", () => rawsock.end());
 		rawsock.on("close", () => ctlsock.end());
 
-		this.pty?.onExit(() => ctlsock.end());
-		this.pty?.onExit(() => rawsock.end());
+		this.pty.onExit(() => ctlsock.end());
+		this.pty.onExit(() => rawsock.end());
 
 		ctlsock.write(JSON.stringify({ cmd: "ATTACH" }));
 		console.log(`PID:${pid} PTY client ${id} connected`);

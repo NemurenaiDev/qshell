@@ -17,28 +17,41 @@ export class Daemon {
 		private sockpath: string,
 		private options: DaemonOptions,
 	) {
-		for (let index = 0; index < this.options.pool; index++) {
-			this.initialized.push(this.MakePty());
-		}
+		this.FillPtyPool();
 	}
 
 	private MakePty() {
 		return new Pty(this.options.shell, this.options.term);
 	}
 
+	private FillPtyPool() {
+		const currentCount = this.initialized.length;
+		for (let index = currentCount; index < this.options.pool; index++) {
+            const pty = this.MakePty()
+            pty.OnExit(() => this.FillPtyPool())
+			this.initialized.push(pty);
+		}
+	}
+
 	private Attach(id: string, ctlsock: Socket, rawsock: Socket) {
-		const pty = this.initialized.shift() ?? this.MakePty();
+		let pty = this.initialized.shift();
+		if (!pty) {
+			console.warn(
+				`Warn: PTY pool was empty when client ${id} requested to attach`,
+			);
+			pty = this.MakePty();
+		}
 
 		pty.Attach(id, ctlsock, rawsock);
 
-		pty.OnExit?.call(this, () => this.connected.delete(pty));
-		pty.OnExit?.call(this, () => this.clients.delete(id));
+		pty.OnExit(() => this.connected.delete(pty));
+		pty.OnExit(() => this.clients.delete(id));
 
 		ctlsock.on("close", () => pty.Kill());
 		rawsock.on("close", () => pty.Kill());
 
 		this.connected.add(pty);
-		this.initialized.push(this.MakePty());
+		this.FillPtyPool();
 	}
 
 	Start() {
@@ -49,7 +62,7 @@ export class Daemon {
 					const packet = data.toString();
 
 					if (!handshakeRegex.test(packet)) {
-						console.log(`Bad handshake packet: ${packet}`);
+						console.error(`Error: BadHandshakePacket: "${packet}"`);
 						return sock.end();
 					}
 
