@@ -23,7 +23,7 @@ export class PtyClient {
 		});
 	}
 
-	async Attach() {
+	async Attach(cmd?: string) {
 		const { stdin, stdout } = process;
 
 		// stdout.write("\x1b[?1049h");
@@ -39,6 +39,9 @@ export class PtyClient {
 		this.ctlsock.on("close", () => this.rawsock.end());
 		this.rawsock.on("close", () => this.ctlsock.end());
 
+		stdin.on("data", (data) => this.rawsock.write(data.toString()));
+		this.rawsock.on("data", (packet) => stdout.write(packet.toString()));
+
 		const SendStdoutSize = () => {
 			this.ctlsock.write(
 				JSON.stringify({
@@ -50,11 +53,10 @@ export class PtyClient {
 				}),
 			);
 		};
-		SendStdoutSize();
 		stdout.on("resize", SendStdoutSize);
+		stdout.rows && SendStdoutSize();
 
-		stdin.on("data", (data) => this.rawsock.write(data.toString()));
-		this.rawsock.on("data", (packet) => stdout.write(packet.toString()));
+		cmd && this.rawsock.write(`${cmd.trim()}\n`);
 	}
 
 	Kill() {

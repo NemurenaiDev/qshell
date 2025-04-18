@@ -6,8 +6,11 @@
     "bin": "./build/src/app.js",
     "scripts": {
         "nix-update": "rm -rf ./node_modules; node2nix -18 --node-env ./nix/node-env.nix --composition ./nix/default.nix --output ./nix/node-package.nix",
+        "prebuild": "npm rebuild node-pty --target=18.20.8 --runtime=node",
         "build": "npx tsc && npx pkg . --targets node18-linux-x64 --output ./build/qshell",
-        "postinstall": "npm rebuild node-pty --target=18.20.8 --runtime=node"
+        "postbuild": "npm rebuild node-pty --target=\"$(node -v | tr -d v)\" --runtime=node",
+        "start": "ts-node ./src/app.ts",
+        "dev": "nodemon --watch ./src --exec yarn ts-node ./src/app.ts"
     },
     "dependencies": {
         "@types/node": "^22.14.0",
@@ -16,5 +19,9 @@
         "node-pty": "^1.0.0",
         "typescript": "^5.0.0",
         "yargs": "^17.7.2"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.9",
+        "ts-node": "^10.9.2"
     }
 }

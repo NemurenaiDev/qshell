@@ -3,6 +3,8 @@ import { Pty } from "./Pty";
 
 export type DaemonOptions = {
 	shell: string;
+	init?: string;
+	sock: string;
 	term: string;
 	pool: number;
 };
@@ -13,10 +15,7 @@ export class Daemon {
 	private clients = new Map<string, { ctlsock?: Socket; rawsock?: Socket }>();
 	private server = createServer();
 
-	constructor(
-		private sockpath: string,
-		private options: DaemonOptions,
-	) {
+	constructor(private options: DaemonOptions) {
 		this.FillPtyPool();
 	}
 
@@ -27,8 +26,8 @@ export class Daemon {
 	private FillPtyPool() {
 		const currentCount = this.initialized.length;
 		for (let index = currentCount; index < this.options.pool; index++) {
-            const pty = this.MakePty()
-            pty.OnExit(() => this.FillPtyPool())
+			const pty = this.MakePty();
+			pty.OnExit(() => this.FillPtyPool());
 			this.initialized.push(pty);
 		}
 	}
@@ -42,7 +41,7 @@ export class Daemon {
 			pty = this.MakePty();
 		}
 
-		pty.Attach(id, ctlsock, rawsock);
+		pty.Attach(id, ctlsock, rawsock, this.options.init);
 
 		pty.OnExit(() => this.connected.delete(pty));
 		pty.OnExit(() => this.clients.delete(id));
@@ -87,7 +86,7 @@ export class Daemon {
 				});
 			});
 
-			this.server.listen(this.sockpath, () => resolve(null));
+			this.server.listen(this.options.sock, () => resolve(null));
 		});
 	}
 

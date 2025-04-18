@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import type { Socket } from "node:net";
 import { homedir } from "node:os";
 import { type IEvent, type IPty, spawn } from "node-pty";
@@ -27,21 +28,22 @@ export class Pty {
 		});
 	}
 
-	Attach(id: string, ctlsock: Socket, rawsock: Socket) {
-		// biome-ignore lint/style/noNonNullAssertion: <explanation>
-		const pid = this.pty?.pid!;
+	Attach(id: string, ctlsock: Socket, rawsock: Socket, init?: string) {
+		assert.ok(this.pty);
+
+		const pid = this.pty.pid;
 
 		ctlsock.on("data", (packet) => {
 			const { cmd, data } = JSON.parse(packet.toString());
-			if (cmd === "resize") {
-				this.pty?.resize(data.cols, data.rows);
+			if (cmd === "resize" && data.cols && data.rows) {
+				this.pty.resize(data.cols, data.rows);
 			} else {
-				console.log(`PID:${pid} PTY ErrBadCmd: ${cmd}`);
+				console.log(`PID:${pid} PTY ErrBadCmd: ${packet.toString()}`);
 			}
 		});
 
-		rawsock.on("data", (data) => this.pty?.write(data.toString()));
-		this.pty?.onData((data) => rawsock.write(data.toString()));
+		rawsock.on("data", (data) => this.pty.write(data.toString()));
+		this.pty.onData((data) => rawsock.write(data.toString()));
 
 		ctlsock.on("close", () => console.log(`PID:${pid} ctlsock ${id} closed`));
 		rawsock.on("close", () => console.log(`PID:${pid} rawsock ${id} closed`));
@@ -53,6 +55,8 @@ export class Pty {
 		this.pty.onExit(() => rawsock.end());
 
 		ctlsock.write(JSON.stringify({ cmd: "ATTACH" }));
+		init && this.pty.write(`${init.trim()}\n`);
+
 		console.log(`PID:${pid} PTY client ${id} connected`);
 	}
 }
