@@ -14,7 +14,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, gitignore, ... }:
+  outputs = { nixpkgs, gitignore, ... }:
     let
       system = "x86_64-linux";
       
@@ -37,7 +37,7 @@
           export PKG_NODE_PATH=./nix/node-v18.20.3-nix-linux-x64
           ln -sf ${nodeDeps}/lib/node_modules ./node_modules
 
-          npm --offline run build
+          npm --offline --ignore-scripts run build
 
           mkdir -p $out/bin
           cp ./build/qshell $out/bin/qshell
