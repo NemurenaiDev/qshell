@@ -1,14 +1,25 @@
 import { existsSync, unlinkSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import Yargs from "yargs";
 import { Daemon } from "./Daemon";
 import { PtyClient } from "./PtyClient";
 
 const yargs = Yargs(process.argv.slice(2))
-	.group(["daemon", "init", "pool", "shell", "term", "sock"], "Daemon mode")
+	.group(
+		["daemon", "force", "init", "pool", "shell", "term", "sock"],
+		"Daemon mode",
+	)
 	.option("daemon", {
 		alias: "d",
 		type: "boolean",
 		desc: "Run in daemon mode which initializes PTY`s",
+		default: false,
+	})
+	.option("force", {
+		alias: "f",
+		type: "boolean",
+		desc: "Delete socket file if its already exists",
 		default: false,
 	})
 	.option("init", {
@@ -39,7 +50,7 @@ const yargs = Yargs(process.argv.slice(2))
 		alias: "S",
 		type: "string",
 		desc: "UNIX socket path to use",
-		default: "/tmp/qshell.sock",
+		default: join(homedir(), ".cache/qshell.sock"),
 	})
 
 	.group(["attach", "cmd", "sock"], "Client mode")
@@ -68,7 +79,11 @@ const argv = yargs.parseSync();
 const main = async () => {
 	if (argv.daemon) {
 		if (existsSync(argv.sock)) {
-			unlinkSync(argv.sock);
+			if (argv.force) {
+				unlinkSync(argv.sock);
+			} else {
+				throw new Error(`Socket file ${argv.sock} already exists`);
+			}
 		}
 
 		const daemon = new Daemon(argv);
@@ -89,6 +104,7 @@ const main = async () => {
 	} else {
 		yargs.option("attach", { default: undefined });
 		yargs.option("daemon", { default: undefined });
+		yargs.option("force", { default: undefined });
 		yargs.option("help", { default: undefined });
 
 		const help = (await yargs.getHelp())

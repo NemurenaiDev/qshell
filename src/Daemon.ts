@@ -1,3 +1,4 @@
+import { chmodSync } from "node:fs";
 import { type Socket, createServer } from "node:net";
 import { Pty } from "./Pty";
 
@@ -86,7 +87,10 @@ export class Daemon {
 				});
 			});
 
-			this.server.listen(this.options.sock, () => resolve(null));
+			this.server.listen(this.options.sock, () => {
+				chmodSync(this.options.sock, 0o600);
+				resolve(null);
+			});
 		});
 	}
 
