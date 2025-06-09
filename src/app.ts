@@ -1,6 +1,5 @@
 import { existsSync, unlinkSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { userInfo } from "node:os";
 import Yargs from "yargs";
 import { Daemon } from "./Daemon";
 import { PtyClient } from "./PtyClient";
@@ -39,18 +38,15 @@ const yargs = Yargs(process.argv.slice(2))
 		desc: "Shell to use in PTY`s",
 		default: "zsh",
 	})
-	// is there any need for passing, for example, xterm-kitty?
 	.option("term", {
-		alias: "t",
 		type: "string",
 		desc: "Sets XTERM value of PTY`s",
 		default: "xterm-256color",
 	})
 	.option("sock", {
-		alias: "S",
 		type: "string",
 		desc: "UNIX socket path to use",
-		default: join(homedir(), ".cache/qshell.sock"),
+		default: `/tmp/qshell.${userInfo().username}.sock`,
 	})
 
 	.group(["attach", "cmd", "sock"], "Client mode")
