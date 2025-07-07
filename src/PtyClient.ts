@@ -39,8 +39,8 @@ export class PtyClient {
 		this.ctlsock.on("close", () => this.rawsock.end());
 		this.rawsock.on("close", () => this.ctlsock.end());
 
-		stdin.on("data", (data) => this.rawsock.write(data.toString()));
-		this.rawsock.on("data", (packet) => stdout.write(packet.toString()));
+		stdin.on("data", (data) => this.rawsock.write(data));
+		this.rawsock.on("data", (packet) => stdout.write(packet));
 
 		const SendStdoutSize = () => {
 			this.ctlsock.write(

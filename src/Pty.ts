@@ -42,8 +42,9 @@ export class Pty {
 			}
 		});
 
-		rawsock.on("data", (data) => this.pty.write(data.toString()));
-		this.pty.onData((data) => rawsock.write(data.toString()));
+		// @ts-ignore avoid decoding binary data
+		rawsock.on("data", (data) => this.pty.write(data));
+		this.pty.onData((data) => rawsock.write(data));
 
 		ctlsock.on("close", () => console.log(`PID:${pid} ctlsock ${id} closed`));
 		rawsock.on("close", () => console.log(`PID:${pid} rawsock ${id} closed`));
