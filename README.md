@@ -1,6 +1,21 @@
+# Archive
+
+I manager to optimize zsh startup time:
+
+* desktop: from ~300ms to ~100ms
+* laptop performance: from ~300ms to ~140ms
+* laptop powersave: from ~1000ms to ~300ms
+
+Sure, it's not <10ms like qshell’s "instant" startup, but it’s fast enough to drop that extra complexity layer.
+
+So, qshell is no longer needed. It was a fun experiment, but ultimately unnecessary
+
 # qshell
 
 qshell - a utility designed to pre-initialize your shell in the background and seamlessly attach to it when opening a new terminal, significantly reducing terminal time-to-ready.
+
+## TODO:
+- Move socket file to /run
 
 ## Known issues:
 - Some control sequences appear to be lost, leading to incorrect tmux render when using side panes. For example, when using right pane cursor, user input, commands output and autosuggestions stays renders on the right pane correctly but the prompt stays on the left pane and "clear" cmd affects both panes. Overall, there is many render issues with the horizontal panes. Not sure how to fix it yet.
